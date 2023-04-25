@@ -1,0 +1,44 @@
+@echo off
+
+setlocal EnableDelayedExpansion
+
+set DOT=.
+set DASH=-
+set SPACE=   // Three spaces between words
+set WAIT_TIME=0.3
+
+set "MORSE_CODE_DICT=.----=1 ..---=2 ...--=3 ....-=4 .....=5 -....=6 --...=7 ---..=8 ----.=9 -----=0 .-=-... -.-.=-.--. -=-..-. ..-..=-.-. --=-- -.=.-. ....=.... ..=.. .---=.--- -.-=-.- -..=-. ..=. ..-.=..-. --.=--. .....=.. ..---=.---- .-.-.-=.---. --..--=-..-. ..--..=-.-.
+
+set "MORSE_CODE_DICT=!MORSE_CODE_DICT: =%SPACE%!"
+set "MORSE_CODE_DICT=!MORSE_CODE_DICT: ==!"
+
+set "MORSE_CODE="
+
+:loop
+if "%MORSE_CODE:~-3%" == "%SPACE%" (
+    set "MORSE_CODE=%MORSE_CODE:~0,-3%  "  // Add a space between words
+    goto convert
+)
+if defined MORSE_CODE (
+    timeout /t %WAIT_TIME% /nobreak >nul
+)
+set "key="
+for /f "usebackq delims=" %%a in (`xcopy /w "%~f0" "%~f0" 2^>nul`) do set "key=!key!."
+set "key=%key:~-1%"
+if "%key%" == "%DOT%" (
+    set "MORSE_CODE=%MORSE_CODE%. "
+) else (
+    set "MORSE_CODE=%MORSE_CODE%- "
+)
+goto loop
+
+:convert
+set "text="
+for %%a in (%MORSE_CODE%) do (
+    for /f "tokens=2 delims==" %%b in ("!MORSE_CODE_DICT:%%a=!") do (
+        set "text=!text!%%b"
+    )
+)
+echo %text%
+set "MORSE_CODE="
+goto loop
