@@ -1,45 +1,56 @@
-@echo off
-setlocal EnableDelayedExpansion
+const dotLength = 250;   // Length of a dot in milliseconds
+const dashLength = 500;  // Length of a dash in milliseconds
+const pauseLength = 250; // Length of a pause between dots and dashes in milliseconds
+const wordPauseLength = 1000; // Length of a pause between words in milliseconds
+let morseCode = "";      // The Morse code sequence
+let timerId = null;      // ID of the timer for measuring press duration
 
-set "dot=250"
-set "dash=500"
-set "pause=250"
-set "word_pause=1000"
+// Convert Morse code to text using a lookup table
+const morseLookup = {
+  ".-": "A", "-...": "B", "-.-.": "C", "-..": "D",
+  ".": "E", "..-.": "F", "--.": "G", "....": "H",
+  "..": "I", ".---": "J", "-.-": "K", ".-..": "L",
+  "--": "M", "-.": "N", "---": "O", ".--.": "P",
+  "--.-": "Q", ".-.": "R", "...": "S", "-": "T",
+  "..-": "U", "...-": "V", ".--": "W", "-..-": "X",
+  "-.--": "Y", "--..": "Z", "-----": "0", ".----": "1",
+  "..---": "2", "...--": "3", "....-": "4", ".....": "5",
+  "-....": "6", "--...": "7", "---..": "8", "----.": "9",
+  ".-.-.-": ".", "--..--": ",", "..--..": "?",
+  "-.-.--": "!", "-..-.": "/", "-.--.": "(",
+  "-.--.-": ")", ".-...": "&", "---...": ":",
+  "-.-.-.": ";", "-...-": "=", ".-.-.": "+",
+  "-....-": "-", "..--.-": "_", ".-..-.": "\"",
+  "...-..-": "$", ".--.-.": "@", "...---...": "SOS"
+};
+function convertToText(morseCode) {
+  return morseCode.split("   ").map(word =>
+    word.split(" ").map(char =>
+      morseLookup[char] || "?"
+    ).join("")
+  ).join(" ");
+}
 
-set "morse_code="
+// Detect space bar presses and convert to dots and dashes
+document.addEventListener("keydown", event => {
+  if (event.code !== "Space") return;
 
-:loop
-timeout /t 0.1 >nul
-if not exist "%temp%\space_press.txt" goto loop
+  event.preventDefault();
+  if (timerId !== null) return; // Press already in progress
 
-set /p "space_press=" <"%temp%\space_press.txt"
-del "%temp%\space_press.txt"
-
-set "duration=!space_press:-=!"
-if !duration! lss %dot% (
-    set "morse_code=!morse_code!. "
-) else if !duration! lss %dash% (
-    set "morse_code=!morse_code!- "
-)
-
-if "!morse_code:~-4!"=="   " (
-    set "morse_code=!morse_code:~0,-4! "
-    goto convert
-)
-
-goto loop
-
-:convert
-for %%a in ("%morse_code: =%") do (
-    set "char=!char!%%a"
-    for /f "tokens=2 delims==," %%b in ('set MORSE_') do (
-        if "%%~a"=="%%~b" set "char=!char!%%~c"
-    )
-)
-
-echo %char%
-
-set "morse_code="
-set "char="
-goto loop
-
+  timerId = setTimeout(() => {
+    // Press duration completed
+    if (morseCode.endsWith("   ")) {
+      // End of a word, convert to text
+      const text = convertToText(morseCode);
+      console.log(text);
+      morseCode = "";
+    } else {
+      // End of a dot or dash, add to the sequence
+      const duration = Date.now() - timerId;
+      const symbol = duration < dashLength ? "." : "-";
+      morseCode += symbol + " ";
+    }
+    timerId = null;
+  }, dotLength + dashLength + pauseLength);
+});
